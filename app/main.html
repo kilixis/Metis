@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
- 
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,13 +8,20 @@
     <title>New note</title>
     <script src="main.js" defer></script>
 </head>
- 
+
 <body>
+    <div id="md-toggle-container">
+        <span>Hide Markdown</span>
+        <label class="switch">
+            <input type="checkbox" id="md-toggle">
+            <span class="slider"></span>
+        </label>
+    </div>
     <div id="container">
         <input type="text" placeholder="Title" id="title">
         <textarea id="editor" placeholder="..."></textarea>
+        <div id="preview"></div>
     </div>
 </body>
- 
+
 </html>
- 
