@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,10 +8,14 @@
     <title>New note</title>
     <script src="main.js"></script>
 </head>
+
 <body>
-    <div id = "title-prompt">
-        <p>Enter a title for your note:</p>
-        <input type="text" id="title-input" placeholder="New Note">
+    <div class="editor">
+        <div id = "title-container"><input type="text" placeholder="Title" id="title"></div>
+        <div id="container">
+            <textarea id="editor" placeholder="..."></textarea>
+        </div>
     </div>
 </body>
+
 </html>
