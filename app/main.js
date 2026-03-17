@@ -2,12 +2,115 @@ const titleInput = document.getElementById("title");
 const editor = document.getElementById("editor");
 const preview = document.getElementById("preview");
 const toggle = document.getElementById("md-toggle");
+const sidebar = document.getElementById("sidebar");
+const sidebarToggle = document.getElementById("sidebar-toggle");
+const overlay = document.getElementById("sidebar-overlay");
+const noteList = document.getElementById("note-list");
+const newNoteBtn = document.getElementById("new-note");
+
+let currentId = null;
+
+function genId() {
+    return "note-" + Date.now();
+}
+
+function getNotes() {
+    return JSON.parse(localStorage.getItem("notes") || "{}");
+}
+
+function saveNotes(notes) {
+    localStorage.setItem("notes", JSON.stringify(notes));
+}
+
+function saveCurrentNote() {
+    if (!currentId) return;
+    const notes = getNotes();
+    notes[currentId] = {
+        id: currentId,
+        title: titleInput.value,
+        body: editor.value,
+        updated: Date.now()
+    };
+    saveNotes(notes);
+    renderNoteList();
+}
+
+function loadNote(id) {
+    const notes = getNotes();
+    const note = notes[id];
+    if (!note) return;
+    currentId = id;
+    titleInput.value = note.title;
+    editor.value = note.body;
+    document.title = note.title.trim() || "New note";
+    renderNoteList();
+}
+
+function createNote() {
+    const id = genId();
+    const notes = getNotes();
+    notes[id] = { id, title: "", body: "", updated: Date.now() };
+    saveNotes(notes);
+    loadNote(id);
+}
+
+function deleteNote(id) {
+    const notes = getNotes();
+    delete notes[id];
+    saveNotes(notes);
+    const remaining = Object.keys(notes);
+    if (remaining.length === 0) {
+        createNote();
+    } else {
+        loadNote(Object.values(getNotes()).sort((a, b) => b.updated - a.updated)[0].id);
+    }
+}
+
+function renderNoteList() {
+    const notes = getNotes();
+    const sorted = Object.values(notes).sort((a, b) => b.updated - a.updated);
+    noteList.innerHTML = "";
+    sorted.forEach(note => {
+        const item = document.createElement("div");
+        item.className = "note-item" + (note.id === currentId ? " active" : "");
+
+        const label = document.createElement("span");
+        label.className = "note-label";
+        label.textContent = note.title.trim() || "Untitled";
+        label.addEventListener("click", () => { loadNote(note.id); closeSidebar(); });
+
+        const del = document.createElement("button");
+        del.className = "note-delete";
+        del.textContent = "×";
+        del.addEventListener("click", (e) => { e.stopPropagation(); deleteNote(note.id); });
+
+        item.appendChild(label);
+        item.appendChild(del);
+        noteList.appendChild(item);
+    });
+}
+
+function openSidebar() {
+    sidebar.classList.add("open");
+    overlay.classList.add("visible");
+}
+
+function closeSidebar() {
+    sidebar.classList.remove("open");
+    overlay.classList.remove("visible");
+}
+
+sidebarToggle.addEventListener("click", openSidebar);
+overlay.addEventListener("click", closeSidebar);
+newNoteBtn.addEventListener("click", createNote);
 
 titleInput.addEventListener("input", () => {
     document.title = titleInput.value.trim() || "New note";
+    saveCurrentNote();
 });
 
 editor.addEventListener("input", () => {
+    saveCurrentNote();
     const overflow = editor.getBoundingClientRect().bottom - (window.innerHeight * 0.98);
     if (overflow > 0) window.scrollBy({ top: overflow, behavior: "instant" });
 });
@@ -60,3 +163,11 @@ toggle.addEventListener("change", () => {
         editor.focus();
     }
 });
+
+const notes = getNotes();
+const existing = Object.keys(notes);
+if (existing.length === 0) {
+    createNote();
+} else {
+    loadNote(Object.values(notes).sort((a, b) => b.updated - a.updated)[0].id);
+}
