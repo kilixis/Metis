@@ -19,20 +19,28 @@ function escapeHtml(text) {
         .replace(/>/g, "&gt;");
 }
 
-function renderLine(line) {
-    let s = escapeHtml(line);
-
-    if (/^### (.+)/.test(s)) return s.replace(/^### (.+)/, '<h3>$1</h3>');
-    if (/^## (.+)/.test(s))  return s.replace(/^## (.+)/, '<h2>$1</h2>');
-    if (/^# (.+)/.test(s))   return s.replace(/^# (.+)/, '<h1>$1</h1>');
-
+function applyInline(s) {
     s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
     s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/__([^_]+)__/g, '<u>$1</u>');
     s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
     s = s.replace(/_([^_]+)_/g, '<em>$1</em>');
     s = s.replace(/~~([^~]+)~~/g, '<s>$1</s>');
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    return s;
+}
 
+function renderLine(line) {
+    let s = escapeHtml(line);
+
+    if (/^### (.+)/.test(s)) return s.replace(/^### (.+)/, (_, t) => `<h3>${applyInline(t)}</h3>`);
+    if (/^## (.+)/.test(s))  return s.replace(/^## (.+)/,  (_, t) => `<h2>${applyInline(t)}</h2>`);
+    if (/^# (.+)/.test(s))   return s.replace(/^# (.+)/,   (_, t) => `<h1>${applyInline(t)}</h1>`);
+    if (/^-# (.+)/.test(s))  return s.replace(/^-# (.+)/,  (_, t) => `<span class="subtext">${applyInline(t)}</span>`);
+    if (/^&gt; (.+)/.test(s)) return s.replace(/^&gt; (.+)/, (_, t) => `<blockquote>${applyInline(t)}</blockquote>`);
+    if (/^[*-] (.+)/.test(s)) return s.replace(/^[*-] (.+)/, (_, t) => `<li>${applyInline(t)}</li>`);
+
+    s = applyInline(s);
     return `<div>${s || '<br>'}</div>`;
 }
 

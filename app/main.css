@@ -170,3 +170,15 @@ textarea {
     border-radius: 3px;
     font-size: 0.9em;
 }
+#preview .subtext { font-size: 0.75em; color: #888; display: block; }
+#preview blockquote {
+    border-left: 3px solid #ccc;
+    margin: 0.3em 0;
+    padding-left: 14px;
+    color: #555;
+}
+#preview li {
+    margin-left: 1.4em;
+    list-style-type: disc;
+}
+#preview a { color: #0066cc; text-decoration: underline; }
