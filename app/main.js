@@ -43,6 +43,8 @@ function loadNote(id) {
     titleInput.value = note.title;
     editor.value = note.body;
     document.title = note.title.trim() || "New note";
+    editor.style.height = "auto";
+    editor.style.height = editor.scrollHeight + "px";
     renderNoteList();
 }
 
@@ -111,6 +113,8 @@ titleInput.addEventListener("input", () => {
 
 editor.addEventListener("input", () => {
     saveCurrentNote();
+    editor.style.height = "auto";
+    editor.style.height = editor.scrollHeight + "px";
     const overflow = editor.getBoundingClientRect().bottom - (window.innerHeight * 0.98);
     if (overflow > 0) window.scrollBy({ top: overflow, behavior: "instant" });
 });
