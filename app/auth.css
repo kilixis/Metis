@@ -1,0 +1,193 @@
+@font-face {
+    font-family: "Work Sans";
+    src: url("fonts/WorkSans-Medium.ttf");
+}
+
+@font-face {
+    font-family: "Manrope Variable";
+    src: url("fonts/Manrope-VariableFont_wght.ttf");
+    font-weight: 200 800;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    scrollbar-width: none;
+}
+
+body {
+    background-color: #f0f0f0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Manrope Variable";
+}
+
+#auth-container {
+    width: 420px;
+    background-color: #fff;
+    border: 1px solid #111;
+    padding: 48px 40px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+#auth-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#auth-title {
+    font-family: "Work Sans";
+    font-size: 36px;
+    font-weight: 1000;
+    color: #111;
+    line-height: 1.1;
+    transition: opacity 0.2s ease;
+}
+
+#auth-subtitle {
+    font-size: 14px;
+    font-weight: 400;
+    color: #888;
+    transition: opacity 0.2s ease;
+}
+
+#auth-form-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: hidden;
+    max-height: 80px;
+    transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, margin 0.35s ease;
+    opacity: 1;
+}
+
+.field.hidden {
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+.field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: "Work Sans";
+}
+
+.field input {
+    font-family: "Manrope Variable";
+    font-weight: 400;
+    font-size: 15px;
+    color: #111;
+    border: none;
+    border-bottom: 1px solid #ddd;
+    outline: none;
+    padding: 8px 0;
+    background: transparent;
+    transition: border-color 0.2s ease;
+    width: 100%;
+}
+
+.field input:focus {
+    border-bottom-color: #111;
+}
+
+.field input::placeholder {
+    color: #ccc;
+}
+
+.password-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-wrap input {
+    flex: 1;
+    padding-right: 28px;
+}
+
+#toggle-password {
+    position: absolute;
+    right: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #aaa;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s;
+}
+
+#toggle-password:hover {
+    color: #111;
+}
+
+#auth-error {
+    font-size: 13px;
+    color: #c00;
+    font-weight: 500;
+    min-height: 18px;
+    font-family: "Work Sans";
+}
+
+#auth-submit {
+    font-family: "Work Sans";
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    background-color: #111;
+    border: none;
+    padding: 13px 0;
+    cursor: pointer;
+    transition: background-color 0.15s, transform 0.1s;
+    letter-spacing: 0.02em;
+}
+
+#auth-submit:hover {
+    background-color: #333;
+}
+
+#auth-submit:active {
+    transform: scale(0.99);
+}
+
+#auth-switch {
+    font-size: 13px;
+    color: #888;
+    font-family: "Work Sans";
+    text-align: center;
+}
+
+#switch-btn {
+    background: none;
+    border: none;
+    font-family: "Work Sans";
+    font-size: 13px;
+    font-weight: 600;
+    color: #111;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    padding: 0;
+}
+
+#switch-btn:hover {
+    color: #555;
+}

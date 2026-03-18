@@ -1,14 +1,36 @@
-const titleInput = document.getElementById("title");
-const editor = document.getElementById("editor");
-const preview = document.getElementById("preview");
-const toggle = document.getElementById("md-toggle");
-const sidebar = document.getElementById("sidebar");
-const sidebarToggle = document.getElementById("sidebar-toggle");
-const overlay = document.getElementById("sidebar-overlay");
-const noteList = document.getElementById("note-list");
-const newNoteBtn = document.getElementById("new-note");
+const { createClient } = supabase;
+const sb = createClient(
+    "https://ygddhfvjndsggrvxllov.supabase.co",
+    "sb_publishable_rLRI3_s6y-Z592cPNy0q7w_gMuhcSex"
+);
 
-let currentId = null;
+let currentUser = null;
+
+sb.auth.getSession().then(({ data: { session } }) => {
+    if (!session) {
+        window.location.href = "auth.html";
+    } else {
+        currentUser = session.user;
+        init();
+    }
+});
+
+sb.auth.onAuthStateChange((_event, session) => {
+    if (!session) window.location.href = "auth.html";
+});
+
+const titleInput    = document.getElementById("title");
+const editor        = document.getElementById("editor");
+const preview       = document.getElementById("preview");
+const toggle        = document.getElementById("md-toggle");
+const sidebar       = document.getElementById("sidebar");
+const sidebarToggle = document.getElementById("sidebar-toggle");
+const overlay       = document.getElementById("sidebar-overlay");
+const noteList      = document.getElementById("note-list");
+const newNoteBtn    = document.getElementById("new-note");
+
+let currentId   = null;
+let saveTimeout = null;
 
 function genId() {
     return "note-" + Date.now();
@@ -18,11 +40,11 @@ function getNotes() {
     return JSON.parse(localStorage.getItem("notes") || "{}");
 }
 
-function saveNotes(notes) {
+function saveNotesLocal(notes) {
     localStorage.setItem("notes", JSON.stringify(notes));
 }
 
-function saveCurrentNote() {
+async function saveCurrentNote() {
     if (!currentId) return;
     const notes = getNotes();
     notes[currentId] = {
@@ -31,8 +53,19 @@ function saveCurrentNote() {
         body: editor.value,
         updated: Date.now()
     };
-    saveNotes(notes);
+    saveNotesLocal(notes);
     renderNoteList();
+
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(async () => {
+        await sb.from("notes").upsert({
+            id: currentId,
+            user_id: currentUser.id,
+            title: titleInput.value,
+            body: editor.value,
+            updated: Date.now()
+        });
+    }, 800);
 }
 
 function loadNote(id) {
@@ -52,15 +85,16 @@ function createNote() {
     const id = genId();
     const notes = getNotes();
     notes[id] = { id, title: "", body: "", updated: Date.now() };
-    saveNotes(notes);
+    saveNotesLocal(notes);
     loadNote(id);
 }
 
 function deleteNote(id) {
     const notes = getNotes();
     delete notes[id];
-    saveNotes(notes);
-    const remaining = Object.keys(notes);
+    saveNotesLocal(notes);
+    sb.from("notes").delete().eq("id", id);
+    const remaining = Object.keys(getNotes());
     if (remaining.length === 0) {
         createNote();
     } else {
@@ -139,14 +173,12 @@ function applyInline(s) {
 
 function renderLine(line) {
     let s = escapeHtml(line);
-
     if (/^### (.+)/.test(s)) return s.replace(/^### (.+)/, (_, t) => `<h3>${applyInline(t)}</h3>`);
     if (/^## (.+)/.test(s))  return s.replace(/^## (.+)/,  (_, t) => `<h2>${applyInline(t)}</h2>`);
     if (/^# (.+)/.test(s))   return s.replace(/^# (.+)/,   (_, t) => `<h1>${applyInline(t)}</h1>`);
     if (/^-# (.+)/.test(s))  return s.replace(/^-# (.+)/,  (_, t) => `<span class="subtext">${applyInline(t)}</span>`);
     if (/^&gt; (.+)/.test(s)) return s.replace(/^&gt; (.+)/, (_, t) => `<blockquote>${applyInline(t)}</blockquote>`);
     if (/^[*-] (.+)/.test(s)) return s.replace(/^[*-] (.+)/, (_, t) => `<li>${applyInline(t)}</li>`);
-
     s = applyInline(s);
     return `<div>${s || '<br>'}</div>`;
 }
@@ -168,23 +200,35 @@ toggle.addEventListener("change", () => {
     }
 });
 
-const notes = getNotes();
-const existing = Object.keys(notes);
-if (existing.length === 0) {
-    createNote();
-} else {
-    loadNote(Object.values(notes).sort((a, b) => b.updated - a.updated)[0].id);
+async function init() {
+    const { data: remoteNotes } = await sb
+        .from("notes")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .order("updated", { ascending: false });
+
+    if (remoteNotes && remoteNotes.length > 0) {
+        const notesObj = {};
+        remoteNotes.forEach(n => { notesObj[n.id] = n; });
+        saveNotesLocal(notesObj);
+    }
+
+    const notes = getNotes();
+    const existing = Object.keys(notes);
+    if (existing.length === 0) {
+        createNote();
+    } else {
+        loadNote(Object.values(notes).sort((a, b) => b.updated - a.updated)[0].id);
+    }
 }
 
-const island = document.getElementById("island");
-const btnShare = document.getElementById("btn-share");
-const btnFormat = document.getElementById("btn-format");
-const btnAccount = document.getElementById("btn-account");
-const panelShare = document.getElementById("panel-share");
+const island      = document.getElementById("island");
+const btnShare    = document.getElementById("btn-share");
+const btnFormat   = document.getElementById("btn-format");
+const btnAccount  = document.getElementById("btn-account");
+const panelShare  = document.getElementById("panel-share");
 const panelFormat = document.getElementById("panel-format");
 const panelAccount = document.getElementById("panel-account");
-
-const islandIcons = document.getElementById("island-icons");
 
 const panels = [
     { btn: btnShare,   panel: panelShare,   cls: "expanded-share" },
@@ -218,10 +262,8 @@ document.addEventListener("click", (e) => {
     if (!island.contains(e.target)) closeAllPanels();
 });
 
-let savedSelection = { start: 0, end: 0 };
-
-editor.addEventListener("blur", () => {
-    savedSelection = { start: editor.selectionStart, end: editor.selectionEnd };
+document.querySelectorAll(".fmt-btn, .island-btn, .panel-item").forEach(el => {
+    el.addEventListener("mousedown", (e) => e.preventDefault());
 });
 
 function insertAround(before, after) {
@@ -244,24 +286,20 @@ function insertLinePrefix(prefix) {
     editor.dispatchEvent(new Event("input"));
 }
 
-document.querySelectorAll(".fmt-btn, .island-btn, .panel-item").forEach(el => {
-    el.addEventListener("mousedown", (e) => e.preventDefault());
-});
-
 document.querySelectorAll(".fmt-btn").forEach(btn => {
     btn.addEventListener("click", () => {
         const action = btn.dataset.action;
-        if (action === "bold")          insertAround("**", "**");
-        else if (action === "italic")   insertAround("*", "*");
-        else if (action === "underline") insertAround("__", "__");
+        if (action === "bold")            insertAround("**", "**");
+        else if (action === "italic")     insertAround("*", "*");
+        else if (action === "underline")  insertAround("__", "__");
         else if (action === "strikethrough") insertAround("~~", "~~");
-        else if (action === "code")     insertAround("`", "`");
-        else if (action === "h1")       insertLinePrefix("# ");
-        else if (action === "h2")       insertLinePrefix("## ");
-        else if (action === "h3")       insertLinePrefix("### ");
-        else if (action === "bullet")   insertLinePrefix("- ");
+        else if (action === "code")       insertAround("`", "`");
+        else if (action === "h1")         insertLinePrefix("# ");
+        else if (action === "h2")         insertLinePrefix("## ");
+        else if (action === "h3")         insertLinePrefix("### ");
+        else if (action === "bullet")     insertLinePrefix("- ");
         else if (action === "blockquote") insertLinePrefix("> ");
-        else if (action === "subtext")  insertLinePrefix("-# ");
+        else if (action === "subtext")    insertLinePrefix("-# ");
     });
 });
 
@@ -292,4 +330,89 @@ document.getElementById("action-download-pdf").addEventListener("click", () => {
 
 document.getElementById("action-copy-link").addEventListener("click", () => {
     navigator.clipboard.writeText(window.location.href);
+});
+
+const settingsPanel   = document.getElementById("settings-panel");
+const settingsOverlay = document.getElementById("settings-overlay");
+const settingsClose   = document.getElementById("settings-close");
+const settingsEmail   = document.getElementById("settings-user-email");
+
+function openSettings() {
+    settingsEmail.textContent = currentUser?.email || "";
+    settingsPanel.classList.add("open");
+    settingsOverlay.classList.add("visible");
+    closeAllPanels();
+}
+
+function closeSettings() {
+    settingsPanel.classList.remove("open");
+    settingsOverlay.classList.remove("visible");
+}
+
+document.getElementById("action-settings").addEventListener("click", openSettings);
+settingsClose.addEventListener("click", closeSettings);
+settingsOverlay.addEventListener("click", closeSettings);
+
+document.getElementById("action-signin").addEventListener("click", () => {
+    window.location.href = "auth.html";
+});
+
+document.getElementById("action-signout").addEventListener("click", async () => {
+    await sb.auth.signOut();
+    localStorage.removeItem("notes");
+    window.location.href = "auth.html";
+});
+
+document.getElementById("btn-change-password").addEventListener("click", async () => {
+    const btn = document.getElementById("btn-change-password");
+    await sb.auth.resetPasswordForEmail(currentUser.email);
+    btn.textContent = "Email sent!";
+    setTimeout(() => { btn.textContent = "Send reset email"; }, 3000);
+});
+
+let fontSize   = parseInt(localStorage.getItem("editor-font-size") || "19");
+let lineHeight = parseFloat(localStorage.getItem("editor-line-height") || "1.6");
+
+function applyEditorPrefs() {
+    editor.style.fontSize    = fontSize + "px";
+    preview.style.fontSize   = fontSize + "px";
+    editor.style.lineHeight  = lineHeight;
+    preview.style.lineHeight = lineHeight;
+    document.getElementById("font-size-label").textContent = fontSize;
+    document.getElementById("lh-label").textContent        = lineHeight.toFixed(1);
+    localStorage.setItem("editor-font-size",   fontSize);
+    localStorage.setItem("editor-line-height", lineHeight);
+}
+
+applyEditorPrefs();
+
+document.getElementById("font-increase").addEventListener("click", () => { if (fontSize < 32) { fontSize++;  applyEditorPrefs(); } });
+document.getElementById("font-decrease").addEventListener("click", () => { if (fontSize > 12) { fontSize--;  applyEditorPrefs(); } });
+document.getElementById("lh-increase").addEventListener("click",  () => { if (lineHeight < 3.0) { lineHeight = Math.round((lineHeight + 0.1) * 10) / 10; applyEditorPrefs(); } });
+document.getElementById("lh-decrease").addEventListener("click",  () => { if (lineHeight > 1.0) { lineHeight = Math.round((lineHeight - 0.1) * 10) / 10; applyEditorPrefs(); } });
+
+const spellcheckToggle = document.getElementById("spellcheck-toggle");
+spellcheckToggle.checked = localStorage.getItem("spellcheck") !== "false";
+editor.spellcheck = spellcheckToggle.checked;
+
+spellcheckToggle.addEventListener("change", () => {
+    editor.spellcheck = spellcheckToggle.checked;
+    localStorage.setItem("spellcheck", spellcheckToggle.checked);
+});
+
+document.getElementById("btn-delete-notes").addEventListener("click", async () => {
+    if (!confirm("Delete all notes? This cannot be undone.")) return;
+    await sb.from("notes").delete().eq("user_id", currentUser.id);
+    localStorage.removeItem("notes");
+    createNote();
+    closeSettings();
+});
+
+document.getElementById("btn-delete-account").addEventListener("click", async () => {
+    if (!confirm("Permanently delete your account and all data? This cannot be undone.")) return;
+    await sb.from("notes").delete().eq("user_id", currentUser.id);
+    await sb.rpc("delete_own_account");
+    await sb.auth.signOut();
+    localStorage.clear();
+    window.location.href = "auth.html";
 });

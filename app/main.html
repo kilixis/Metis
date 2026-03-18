@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="main.css">
     <title>New note</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="main.js" defer></script>
 </head>
 
@@ -103,6 +104,61 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     Sign out
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-overlay"></div>
+    <div id="settings-panel">
+        <div id="settings-header">
+            <span>Settings</span>
+            <button id="settings-close">×</button>
+        </div>
+        <div id="settings-body">
+            <div class="settings-section">
+                <div class="settings-section-title">Account</div>
+                <div class="settings-row" id="settings-user-email"></div>
+                <div class="settings-row">
+                    <span>Change password</span>
+                    <button class="settings-action-btn" id="btn-change-password">Send reset email</button>
+                </div>
+            </div>
+            <div class="settings-section">
+                <div class="settings-section-title">Editor</div>
+                <div class="settings-row">
+                    <span>Font size</span>
+                    <div class="settings-stepper">
+                        <button class="stepper-btn" id="font-decrease">−</button>
+                        <span id="font-size-label">19</span>
+                        <button class="stepper-btn" id="font-increase">+</button>
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <span>Line height</span>
+                    <div class="settings-stepper">
+                        <button class="stepper-btn" id="lh-decrease">−</button>
+                        <span id="lh-label">1.6</span>
+                        <button class="stepper-btn" id="lh-increase">+</button>
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <span>Spellcheck</span>
+                    <label class="switch">
+                        <input type="checkbox" id="spellcheck-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="settings-section">
+                <div class="settings-section-title">Danger zone</div>
+                <div class="settings-row">
+                    <span>Delete all notes</span>
+                    <button class="settings-action-btn danger" id="btn-delete-notes">Delete all</button>
+                </div>
+                <div class="settings-row">
+                    <span>Delete account</span>
+                    <button class="settings-action-btn danger" id="btn-delete-account">Delete account</button>
+                </div>
             </div>
         </div>
     </div>
