@@ -218,13 +218,17 @@ document.addEventListener("click", (e) => {
     if (!island.contains(e.target)) closeAllPanels();
 });
 
+let savedSelection = { start: 0, end: 0 };
+
+editor.addEventListener("blur", () => {
+    savedSelection = { start: editor.selectionStart, end: editor.selectionEnd };
+});
+
 function insertAround(before, after) {
     const start = editor.selectionStart;
     const end = editor.selectionEnd;
     const selected = editor.value.slice(start, end);
-    const replacement = before + selected + after;
-    editor.setRangeText(replacement, start, end, "select");
-    editor.focus();
+    editor.setRangeText(before + selected + after, start, end, "select");
     editor.dispatchEvent(new Event("input"));
 }
 
@@ -237,9 +241,12 @@ function insertLinePrefix(prefix) {
     } else {
         editor.setRangeText(prefix, lineStart, lineStart, "end");
     }
-    editor.focus();
     editor.dispatchEvent(new Event("input"));
 }
+
+document.querySelectorAll(".fmt-btn, .island-btn, .panel-item").forEach(el => {
+    el.addEventListener("mousedown", (e) => e.preventDefault());
+});
 
 document.querySelectorAll(".fmt-btn").forEach(btn => {
     btn.addEventListener("click", () => {
