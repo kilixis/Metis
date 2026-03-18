@@ -6,19 +6,6 @@ const sb = createClient(
 
 let currentUser = null;
 
-sb.auth.getSession().then(({ data: { session } }) => {
-    if (!session) {
-        window.location.href = "auth.html";
-    } else {
-        currentUser = session.user;
-        init();
-    }
-});
-
-sb.auth.onAuthStateChange((_event, session) => {
-    if (!session) window.location.href = "auth.html";
-});
-
 const titleInput    = document.getElementById("title");
 const editor        = document.getElementById("editor");
 const preview       = document.getElementById("preview");
@@ -29,42 +16,61 @@ const overlay       = document.getElementById("sidebar-overlay");
 const noteList      = document.getElementById("note-list");
 const newNoteBtn    = document.getElementById("new-note");
 
+const darkToggle = document.getElementById("dark-mode-toggle");
+if (localStorage.getItem("dark-mode") === "true") {
+    document.documentElement.setAttribute("data-theme", "dark");
+    darkToggle.checked = true;
+}
+darkToggle.addEventListener("change", () => {
+    if (darkToggle.checked) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        localStorage.setItem("dark-mode", "true");
+    } else {
+        document.documentElement.removeAttribute("data-theme");
+        localStorage.setItem("dark-mode", "false");
+    }
+});
+
+function applyAuthUI() {
+    const signedIn = !!currentUser;
+    document.getElementById("action-signin").style.display      = signedIn ? "none" : "flex";
+    document.getElementById("action-signout").style.display     = signedIn ? "flex" : "none";
+    document.getElementById("settings-account-section").style.display = signedIn ? "block" : "none";
+    document.getElementById("settings-danger-section").style.display  = signedIn ? "block" : "none";
+}
+
+sb.auth.getSession().then(({ data: { session } }) => {
+    currentUser = session?.user || null;
+    applyAuthUI();
+    if (currentUser) {
+        syncAndInit();
+    } else {
+        localInit();
+    }
+});
+
+sb.auth.onAuthStateChange((_event, session) => {
+    currentUser = session?.user || null;
+    applyAuthUI();
+});
+
 let currentId   = null;
 let saveTimeout = null;
 
-function genId() {
-    return "note-" + Date.now();
-}
+function genId() { return "note-" + Date.now(); }
+function getNotes() { return JSON.parse(localStorage.getItem("notes") || "{}"); }
+function saveNotesLocal(notes) { localStorage.setItem("notes", JSON.stringify(notes)); }
 
-function getNotes() {
-    return JSON.parse(localStorage.getItem("notes") || "{}");
-}
-
-function saveNotesLocal(notes) {
-    localStorage.setItem("notes", JSON.stringify(notes));
-}
-
-async function saveCurrentNote() {
+function saveCurrentNote() {
     if (!currentId) return;
     const notes = getNotes();
-    notes[currentId] = {
-        id: currentId,
-        title: titleInput.value,
-        body: editor.value,
-        updated: Date.now()
-    };
+    notes[currentId] = { id: currentId, title: titleInput.value, body: editor.value, updated: Date.now() };
     saveNotesLocal(notes);
     renderNoteList();
-
+    if (!currentUser) return;
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(async () => {
-        await sb.from("notes").upsert({
-            id: currentId,
-            user_id: currentUser.id,
-            title: titleInput.value,
-            body: editor.value,
-            updated: Date.now()
-        });
+        await sb.from("notes").upsert({ id: currentId, user_id: currentUser.id, title: titleInput.value, body: editor.value, updated: Date.now() });
     }, 800);
 }
 
@@ -93,13 +99,10 @@ function deleteNote(id) {
     const notes = getNotes();
     delete notes[id];
     saveNotesLocal(notes);
-    sb.from("notes").delete().eq("id", id);
+    if (currentUser) sb.from("notes").delete().eq("id", id);
     const remaining = Object.keys(getNotes());
-    if (remaining.length === 0) {
-        createNote();
-    } else {
-        loadNote(Object.values(getNotes()).sort((a, b) => b.updated - a.updated)[0].id);
-    }
+    if (remaining.length === 0) { createNote(); }
+    else { loadNote(Object.values(getNotes()).sort((a, b) => b.updated - a.updated)[0].id); }
 }
 
 function renderNoteList() {
@@ -109,32 +112,39 @@ function renderNoteList() {
     sorted.forEach(note => {
         const item = document.createElement("div");
         item.className = "note-item" + (note.id === currentId ? " active" : "");
-
         const label = document.createElement("span");
         label.className = "note-label";
         label.textContent = note.title.trim() || "Untitled";
         label.addEventListener("click", () => { loadNote(note.id); closeSidebar(); });
-
         const del = document.createElement("button");
         del.className = "note-delete";
         del.textContent = "×";
         del.addEventListener("click", (e) => { e.stopPropagation(); deleteNote(note.id); });
-
         item.appendChild(label);
         item.appendChild(del);
         noteList.appendChild(item);
     });
 }
 
-function openSidebar() {
-    sidebar.classList.add("open");
-    overlay.classList.add("visible");
+function localInit() {
+    const notes = getNotes();
+    const existing = Object.keys(notes);
+    if (existing.length === 0) { createNote(); }
+    else { loadNote(Object.values(notes).sort((a, b) => b.updated - a.updated)[0].id); }
 }
 
-function closeSidebar() {
-    sidebar.classList.remove("open");
-    overlay.classList.remove("visible");
+async function syncAndInit() {
+    const { data: remoteNotes } = await sb.from("notes").select("*").eq("user_id", currentUser.id).order("updated", { ascending: false });
+    if (remoteNotes && remoteNotes.length > 0) {
+        const notesObj = {};
+        remoteNotes.forEach(n => { notesObj[n.id] = n; });
+        saveNotesLocal(notesObj);
+    }
+    localInit();
 }
+
+function openSidebar() { sidebar.classList.add("open"); overlay.classList.add("visible"); }
+function closeSidebar() { sidebar.classList.remove("open"); overlay.classList.remove("visible"); }
 
 sidebarToggle.addEventListener("click", openSidebar);
 overlay.addEventListener("click", closeSidebar);
@@ -154,10 +164,7 @@ editor.addEventListener("input", () => {
 });
 
 function escapeHtml(text) {
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function applyInline(s) {
@@ -184,8 +191,7 @@ function renderLine(line) {
 }
 
 function renderPreview() {
-    const lines = editor.value.split('\n');
-    preview.innerHTML = lines.map(renderLine).join('');
+    preview.innerHTML = editor.value.split('\n').map(renderLine).join('');
 }
 
 toggle.addEventListener("change", () => {
@@ -199,28 +205,6 @@ toggle.addEventListener("change", () => {
         editor.focus();
     }
 });
-
-async function init() {
-    const { data: remoteNotes } = await sb
-        .from("notes")
-        .select("*")
-        .eq("user_id", currentUser.id)
-        .order("updated", { ascending: false });
-
-    if (remoteNotes && remoteNotes.length > 0) {
-        const notesObj = {};
-        remoteNotes.forEach(n => { notesObj[n.id] = n; });
-        saveNotesLocal(notesObj);
-    }
-
-    const notes = getNotes();
-    const existing = Object.keys(notes);
-    if (existing.length === 0) {
-        createNote();
-    } else {
-        loadNote(Object.values(notes).sort((a, b) => b.updated - a.updated)[0].id);
-    }
-}
 
 const island      = document.getElementById("island");
 const btnShare    = document.getElementById("btn-share");
@@ -278,59 +262,45 @@ function insertLinePrefix(prefix) {
     const start = editor.selectionStart;
     const lineStart = editor.value.lastIndexOf("\n", start - 1) + 1;
     const alreadyHas = editor.value.slice(lineStart).startsWith(prefix);
-    if (alreadyHas) {
-        editor.setRangeText("", lineStart, lineStart + prefix.length, "end");
-    } else {
-        editor.setRangeText(prefix, lineStart, lineStart, "end");
-    }
+    if (alreadyHas) { editor.setRangeText("", lineStart, lineStart + prefix.length, "end"); }
+    else { editor.setRangeText(prefix, lineStart, lineStart, "end"); }
     editor.dispatchEvent(new Event("input"));
 }
 
 document.querySelectorAll(".fmt-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-        const action = btn.dataset.action;
-        if (action === "bold")            insertAround("**", "**");
-        else if (action === "italic")     insertAround("*", "*");
-        else if (action === "underline")  insertAround("__", "__");
-        else if (action === "strikethrough") insertAround("~~", "~~");
-        else if (action === "code")       insertAround("`", "`");
-        else if (action === "h1")         insertLinePrefix("# ");
-        else if (action === "h2")         insertLinePrefix("## ");
-        else if (action === "h3")         insertLinePrefix("### ");
-        else if (action === "bullet")     insertLinePrefix("- ");
-        else if (action === "blockquote") insertLinePrefix("> ");
-        else if (action === "subtext")    insertLinePrefix("-# ");
+        const a = btn.dataset.action;
+        if (a === "bold")          insertAround("**", "**");
+        else if (a === "italic")   insertAround("*", "*");
+        else if (a === "underline") insertAround("__", "__");
+        else if (a === "strikethrough") insertAround("~~", "~~");
+        else if (a === "code")     insertAround("`", "`");
+        else if (a === "h1")       insertLinePrefix("# ");
+        else if (a === "h2")       insertLinePrefix("## ");
+        else if (a === "h3")       insertLinePrefix("### ");
+        else if (a === "bullet")   insertLinePrefix("- ");
+        else if (a === "blockquote") insertLinePrefix("> ");
+        else if (a === "subtext")  insertLinePrefix("-# ");
     });
 });
 
-function getFilename(ext) {
-    return (titleInput.value.trim() || "note") + "." + ext;
-}
+function getFilename(ext) { return (titleInput.value.trim() || "note") + "." + ext; }
 
 document.getElementById("action-download-md").addEventListener("click", () => {
-    const blob = new Blob([editor.value], { type: "text/markdown" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = getFilename("md");
-    a.click();
+    a.href = URL.createObjectURL(new Blob([editor.value], { type: "text/markdown" }));
+    a.download = getFilename("md"); a.click();
 });
 
 document.getElementById("action-download-txt").addEventListener("click", () => {
     const plain = editor.value.replace(/[*_~`>#-]/g, "").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-    const blob = new Blob([plain], { type: "text/plain" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = getFilename("txt");
-    a.click();
+    a.href = URL.createObjectURL(new Blob([plain], { type: "text/plain" }));
+    a.download = getFilename("txt"); a.click();
 });
 
-document.getElementById("action-download-pdf").addEventListener("click", () => {
-    window.print();
-});
-
-document.getElementById("action-copy-link").addEventListener("click", () => {
-    navigator.clipboard.writeText(window.location.href);
-});
+document.getElementById("action-download-pdf").addEventListener("click", () => window.print());
+document.getElementById("action-copy-link").addEventListener("click", () => navigator.clipboard.writeText(window.location.href));
 
 const settingsPanel   = document.getElementById("settings-panel");
 const settingsOverlay = document.getElementById("settings-overlay");
@@ -338,7 +308,7 @@ const settingsClose   = document.getElementById("settings-close");
 const settingsEmail   = document.getElementById("settings-user-email");
 
 function openSettings() {
-    settingsEmail.textContent = currentUser?.email || "";
+    if (currentUser) settingsEmail.textContent = currentUser.email;
     settingsPanel.classList.add("open");
     settingsOverlay.classList.add("visible");
     closeAllPanels();
@@ -353,9 +323,7 @@ document.getElementById("action-settings").addEventListener("click", openSetting
 settingsClose.addEventListener("click", closeSettings);
 settingsOverlay.addEventListener("click", closeSettings);
 
-document.getElementById("action-signin").addEventListener("click", () => {
-    window.location.href = "auth.html";
-});
+document.getElementById("action-signin").addEventListener("click", () => { window.location.href = "auth.html"; });
 
 document.getElementById("action-signout").addEventListener("click", async () => {
     await sb.auth.signOut();
@@ -365,6 +333,7 @@ document.getElementById("action-signout").addEventListener("click", async () => 
 
 document.getElementById("btn-change-password").addEventListener("click", async () => {
     const btn = document.getElementById("btn-change-password");
+    if (!currentUser) return;
     await sb.auth.resetPasswordForEmail(currentUser.email);
     btn.textContent = "Email sent!";
     setTimeout(() => { btn.textContent = "Send reset email"; }, 3000);
@@ -394,7 +363,6 @@ document.getElementById("lh-decrease").addEventListener("click",  () => { if (li
 const spellcheckToggle = document.getElementById("spellcheck-toggle");
 spellcheckToggle.checked = localStorage.getItem("spellcheck") !== "false";
 editor.spellcheck = spellcheckToggle.checked;
-
 spellcheckToggle.addEventListener("change", () => {
     editor.spellcheck = spellcheckToggle.checked;
     localStorage.setItem("spellcheck", spellcheckToggle.checked);
@@ -402,7 +370,7 @@ spellcheckToggle.addEventListener("change", () => {
 
 document.getElementById("btn-delete-notes").addEventListener("click", async () => {
     if (!confirm("Delete all notes? This cannot be undone.")) return;
-    await sb.from("notes").delete().eq("user_id", currentUser.id);
+    if (currentUser) await sb.from("notes").delete().eq("user_id", currentUser.id);
     localStorage.removeItem("notes");
     createNote();
     closeSettings();
@@ -410,8 +378,10 @@ document.getElementById("btn-delete-notes").addEventListener("click", async () =
 
 document.getElementById("btn-delete-account").addEventListener("click", async () => {
     if (!confirm("Permanently delete your account and all data? This cannot be undone.")) return;
-    await sb.from("notes").delete().eq("user_id", currentUser.id);
-    await sb.rpc("delete_own_account");
+    if (currentUser) {
+        await sb.from("notes").delete().eq("user_id", currentUser.id);
+        await sb.rpc("delete_own_account");
+    }
     await sb.auth.signOut();
     localStorage.clear();
     window.location.href = "auth.html";

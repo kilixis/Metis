@@ -191,3 +191,14 @@ body {
 #switch-btn:hover {
     color: #555;
 }
+
+#auth-subtitle a {
+    color: #111;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+#auth-subtitle a:hover {
+    color: #555;
+}

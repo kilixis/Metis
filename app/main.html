@@ -115,7 +115,7 @@
             <button id="settings-close">×</button>
         </div>
         <div id="settings-body">
-            <div class="settings-section">
+            <div class="settings-section" id="settings-account-section">
                 <div class="settings-section-title">Account</div>
                 <div class="settings-row" id="settings-user-email"></div>
                 <div class="settings-row">
@@ -148,8 +148,15 @@
                         <span class="slider"></span>
                     </label>
                 </div>
+                <div class="settings-row">
+                    <span>Dark mode</span>
+                    <label class="switch">
+                        <input type="checkbox" id="dark-mode-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
-            <div class="settings-section">
+            <div class="settings-section" id="settings-danger-section">
                 <div class="settings-section-title">Danger zone</div>
                 <div class="settings-row">
                     <span>Delete all notes</span>
