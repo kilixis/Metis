@@ -175,3 +175,116 @@ if (existing.length === 0) {
 } else {
     loadNote(Object.values(notes).sort((a, b) => b.updated - a.updated)[0].id);
 }
+// ── Dynamic Island ──
+const island = document.getElementById("island");
+const btnShare = document.getElementById("btn-share");
+const btnFormat = document.getElementById("btn-format");
+const btnAccount = document.getElementById("btn-account");
+const panelShare = document.getElementById("panel-share");
+const panelFormat = document.getElementById("panel-format");
+const panelAccount = document.getElementById("panel-account");
+
+const islandIcons = document.getElementById("island-icons");
+
+const panels = [
+    { btn: btnShare,   panel: panelShare,   cls: "expanded-share" },
+    { btn: btnFormat,  panel: panelFormat,  cls: "expanded-format" },
+    { btn: btnAccount, panel: panelAccount, cls: "expanded-account" },
+];
+
+function openPanel(targetPanel, targetBtn, cls) {
+    const alreadyOpen = targetPanel.classList.contains("visible");
+    closeAllPanels();
+    if (!alreadyOpen) {
+        targetBtn.classList.add("collapsed");
+        targetPanel.classList.add("visible");
+        island.classList.add(cls);
+    }
+}
+
+function closeAllPanels() {
+    panels.forEach(({ btn, panel, cls }) => {
+        btn.classList.remove("active", "collapsed");
+        panel.classList.remove("visible");
+        island.classList.remove(cls);
+    });
+}
+
+btnShare.addEventListener("click",   () => openPanel(panelShare,   btnShare,   "expanded-share"));
+btnFormat.addEventListener("click",  () => openPanel(panelFormat,  btnFormat,  "expanded-format"));
+btnAccount.addEventListener("click", () => openPanel(panelAccount, btnAccount, "expanded-account"));
+
+document.addEventListener("click", (e) => {
+    if (!island.contains(e.target)) closeAllPanels();
+});
+
+// ── Format buttons ──
+function insertAround(before, after) {
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const selected = editor.value.slice(start, end);
+    const replacement = before + selected + after;
+    editor.setRangeText(replacement, start, end, "select");
+    editor.focus();
+    editor.dispatchEvent(new Event("input"));
+}
+
+function insertLinePrefix(prefix) {
+    const start = editor.selectionStart;
+    const lineStart = editor.value.lastIndexOf("\n", start - 1) + 1;
+    const alreadyHas = editor.value.slice(lineStart).startsWith(prefix);
+    if (alreadyHas) {
+        editor.setRangeText("", lineStart, lineStart + prefix.length, "end");
+    } else {
+        editor.setRangeText(prefix, lineStart, lineStart, "end");
+    }
+    editor.focus();
+    editor.dispatchEvent(new Event("input"));
+}
+
+document.querySelectorAll(".fmt-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const action = btn.dataset.action;
+        if (action === "bold")          insertAround("**", "**");
+        else if (action === "italic")   insertAround("*", "*");
+        else if (action === "underline") insertAround("__", "__");
+        else if (action === "strikethrough") insertAround("~~", "~~");
+        else if (action === "code")     insertAround("`", "`");
+        else if (action === "h1")       insertLinePrefix("# ");
+        else if (action === "h2")       insertLinePrefix("## ");
+        else if (action === "h3")       insertLinePrefix("### ");
+        else if (action === "bullet")   insertLinePrefix("- ");
+        else if (action === "blockquote") insertLinePrefix("> ");
+        else if (action === "subtext")  insertLinePrefix("-# ");
+    });
+});
+
+// ── Share actions ──
+function getFilename(ext) {
+    return (titleInput.value.trim() || "note") + "." + ext;
+}
+
+document.getElementById("action-download-md").addEventListener("click", () => {
+    const blob = new Blob([editor.value], { type: "text/markdown" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = getFilename("md");
+    a.click();
+});
+
+document.getElementById("action-download-txt").addEventListener("click", () => {
+    const plain = editor.value.replace(/[*_~`>#-]/g, "").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+    const blob = new Blob([plain], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = getFilename("txt");
+    a.click();
+});
+
+document.getElementById("action-download-pdf").addEventListener("click", () => {
+    window.print();
+});
+
+document.getElementById("action-copy-link").addEventListener("click", () => {
+    navigator.clipboard.writeText(window.location.href);
+});

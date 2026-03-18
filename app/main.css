@@ -308,3 +308,119 @@ textarea {
 }
 #preview li { margin-left: 1.4em; list-style-type: disc; }
 #preview a { color: #0066cc; text-decoration: underline; }
+/* ── Dynamic Island ── */
+#island {
+    position: fixed;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 200;
+    background-color: #111;
+    border-radius: 40px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    max-width: 140px;
+    transition: max-width 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+#island.expanded-share   { max-width: 480px; }
+#island.expanded-format  { max-width: 680px; }
+#island.expanded-account { max-width: 380px; }
+
+#island-icons {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 8px 10px;
+    flex-shrink: 0;
+    justify-content: center;
+}
+
+.island-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    transition: background-color 0.15s, width 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+.island-btn:hover {
+    background-color: rgba(255,255,255,0.12);
+}
+
+.island-btn.collapsed {
+    width: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.island-panel {
+    display: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 2px;
+    padding: 0 8px 0 0;
+    opacity: 0;
+    transition: opacity 0.3s ease 0.3s;
+}
+
+.island-panel.visible {
+    display: flex;
+    opacity: 1;
+}
+
+.panel-item {
+    background: none;
+    border: none;
+    color: #ccc;
+    font-family: "Work Sans";
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.panel-item:hover {
+    background-color: rgba(255,255,255,0.1);
+    color: #fff;
+}
+
+.fmt-btn {
+    font-size: 13px;
+    padding: 5px 8px;
+    min-width: 30px;
+    justify-content: center;
+}
+
+.panel-divider {
+    width: 1px;
+    height: 18px;
+    background-color: rgba(255,255,255,0.15);
+    margin: 0 2px;
+    flex-shrink: 0;
+}
+
+.island-sep {
+    width: 1px;
+    height: 18px;
+    background-color: rgba(255,255,255,0.2);
+    flex-shrink: 0;
+    margin: 0 4px 0 2px;
+}
