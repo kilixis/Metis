@@ -308,7 +308,7 @@ textarea {
 }
 #preview li { margin-left: 1.4em; list-style-type: disc; }
 #preview a { color: #0066cc; text-decoration: underline; }
-/* ── Dynamic Island ── */
+
 #island {
     position: fixed;
     top: 14px;
