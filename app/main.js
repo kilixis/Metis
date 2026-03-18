@@ -175,7 +175,7 @@ if (existing.length === 0) {
 } else {
     loadNote(Object.values(notes).sort((a, b) => b.updated - a.updated)[0].id);
 }
-// ── Dynamic Island ──
+
 const island = document.getElementById("island");
 const btnShare = document.getElementById("btn-share");
 const btnFormat = document.getElementById("btn-format");
@@ -218,7 +218,6 @@ document.addEventListener("click", (e) => {
     if (!island.contains(e.target)) closeAllPanels();
 });
 
-// ── Format buttons ──
 function insertAround(before, after) {
     const start = editor.selectionStart;
     const end = editor.selectionEnd;
@@ -259,7 +258,6 @@ document.querySelectorAll(".fmt-btn").forEach(btn => {
     });
 });
 
-// ── Share actions ──
 function getFilename(ext) {
     return (titleInput.value.trim() || "note") + "." + ext;
 }
