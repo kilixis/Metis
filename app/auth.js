@@ -23,8 +23,8 @@ let isLogin = true;
 function setMode(login) {
     isLogin = login;
     authError.textContent = "";
-    authTitle.textContent    = login ? "Welcome back." : "Create account.";
-    authSubtitle.textContent = login ? "Sign in to your account to continue." : "Start writing. No distractions.";
+    authTitle.textContent    = login ? "Welcome back." : "Create an account";
+    authSubtitle.textContent = login ? "Sign in to your account to continue." : "Sign up to start writing";
     authSubmit.textContent   = login ? "Sign in" : "Sign up";
     switchBtn.textContent    = login ? "Sign up" : "Sign in";
     authSwitch.firstChild.textContent = login ? "Don't have an account? " : "Already have an account? ";
