@@ -33,8 +33,8 @@ darkToggle.addEventListener("change", () => {
 
 function applyAuthUI() {
     const signedIn = !!currentUser;
-    document.getElementById("action-signin").style.display      = signedIn ? "none" : "flex";
-    document.getElementById("action-signout").style.display     = signedIn ? "flex" : "none";
+    document.getElementById("action-signin").style.display            = signedIn ? "none" : "flex";
+    document.getElementById("action-signout").style.display           = signedIn ? "flex" : "none";
     document.getElementById("settings-account-section").style.display = signedIn ? "block" : "none";
     document.getElementById("settings-danger-section").style.display  = signedIn ? "block" : "none";
 }
@@ -42,11 +42,13 @@ function applyAuthUI() {
 sb.auth.getSession().then(({ data: { session } }) => {
     currentUser = session?.user || null;
     applyAuthUI();
-    if (currentUser) {
-        syncAndInit();
-    } else {
-        localInit();
-    }
+    checkIncomingShare().then((handled) => {
+        if (!handled) {
+            if (currentUser) { syncAndInit(); } else { localInit(); }
+        } else {
+            renderNoteList();
+        }
+    });
 });
 
 sb.auth.onAuthStateChange((_event, session) => {
@@ -64,14 +66,31 @@ function saveNotesLocal(notes) { localStorage.setItem("notes", JSON.stringify(no
 function saveCurrentNote() {
     if (!currentId) return;
     const notes = getNotes();
-    notes[currentId] = { id: currentId, title: titleInput.value, body: editor.value, updated: Date.now() };
+    notes[currentId] = {
+        id: currentId,
+        title: titleInput.value,
+        body: editor.value,
+        updated: Date.now(),
+        shared: notes[currentId]?.shared || false
+    };
     saveNotesLocal(notes);
     renderNoteList();
     if (!currentUser) return;
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(async () => {
-        await sb.from("notes").upsert({ id: currentId, user_id: currentUser.id, title: titleInput.value, body: editor.value, updated: Date.now() });
+        await sb.from("notes").upsert({
+            id: currentId, user_id: currentUser.id,
+            title: titleInput.value, body: editor.value, updated: Date.now()
+        });
     }, 800);
+}
+
+const wordCountEl = document.getElementById("word-count");
+
+function updateWordCount() {
+    const text = editor.value.trim();
+    const count = text === "" ? 0 : text.split(/\s+/).length;
+    wordCountEl.textContent = count === 1 ? "1 word" : `${count} words`;
 }
 
 function loadNote(id) {
@@ -85,12 +104,13 @@ function loadNote(id) {
     editor.style.height = "auto";
     editor.style.height = editor.scrollHeight + "px";
     renderNoteList();
+    updateWordCount();
 }
 
 function createNote() {
     const id = genId();
     const notes = getNotes();
-    notes[id] = { id, title: "", body: "", updated: Date.now() };
+    notes[id] = { id, title: "", body: "", updated: Date.now(), shared: false };
     saveNotesLocal(notes);
     loadNote(id);
 }
@@ -112,14 +132,24 @@ function renderNoteList() {
     sorted.forEach(note => {
         const item = document.createElement("div");
         item.className = "note-item" + (note.id === currentId ? " active" : "");
+
         const label = document.createElement("span");
         label.className = "note-label";
         label.textContent = note.title.trim() || "Untitled";
         label.addEventListener("click", () => { loadNote(note.id); closeSidebar(); });
+
+        if (note.shared) {
+            const icon = document.createElement("span");
+            icon.className = "note-shared-icon";
+            icon.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
+            label.appendChild(icon);
+        }
+
         const del = document.createElement("button");
         del.className = "note-delete";
         del.textContent = "×";
         del.addEventListener("click", (e) => { e.stopPropagation(); deleteNote(note.id); });
+
         item.appendChild(label);
         item.appendChild(del);
         noteList.appendChild(item);
@@ -128,19 +158,65 @@ function renderNoteList() {
 
 function localInit() {
     const notes = getNotes();
-    const existing = Object.keys(notes);
-    if (existing.length === 0) { createNote(); }
+    if (Object.keys(notes).length === 0) { createNote(); }
     else { loadNote(Object.values(notes).sort((a, b) => b.updated - a.updated)[0].id); }
 }
 
 async function syncAndInit() {
-    const { data: remoteNotes } = await sb.from("notes").select("*").eq("user_id", currentUser.id).order("updated", { ascending: false });
+    const { data: remoteNotes } = await sb.from("notes").select("*")
+        .eq("user_id", currentUser.id).order("updated", { ascending: false });
     if (remoteNotes && remoteNotes.length > 0) {
+        const local = getNotes();
         const notesObj = {};
-        remoteNotes.forEach(n => { notesObj[n.id] = n; });
+        remoteNotes.forEach(n => { notesObj[n.id] = { ...n, shared: local[n.id]?.shared || false }; });
         saveNotesLocal(notesObj);
     }
     localInit();
+}
+
+async function checkIncomingShare() {
+    const params = new URLSearchParams(location.search);
+    const shareId = params.get("share");
+    if (!shareId) return false;
+
+    const { data: shared, error } = await sb.from("shared_notes").select("*").eq("id", shareId).single();
+    if (error || !shared) {
+        window.history.replaceState({}, "", location.pathname);
+        return false;
+    }
+
+    if (shared.mode === "allowlist") {
+        if (!currentUser) {
+            window.location.href = `auth.html?next=${encodeURIComponent(location.pathname + location.search)}`;
+            return true;
+        }
+        const { data: allowed } = await sb.from("share_allowlist")
+            .select("email")
+            .eq("shared_note_id", shareId)
+            .eq("email", currentUser.email);
+        if (!allowed || allowed.length === 0) {
+            window.history.replaceState({}, "", location.pathname);
+            alert("Your account doesn't have access to this shared note.");
+            return false;
+        }
+    }
+
+    window.history.replaceState({}, "", location.pathname);
+
+    const newId = "note-" + Date.now();
+    const notes = getNotes();
+    notes[newId] = { id: newId, title: shared.title, body: shared.body, updated: Date.now(), shared: true };
+    saveNotesLocal(notes);
+
+    if (currentUser) {
+        await sb.from("notes").upsert({
+            id: newId, user_id: currentUser.id,
+            title: shared.title, body: shared.body, updated: Date.now()
+        });
+    }
+
+    loadNote(newId);
+    return true;
 }
 
 function openSidebar() { sidebar.classList.add("open"); overlay.classList.add("visible"); }
@@ -155,12 +231,23 @@ titleInput.addEventListener("input", () => {
     saveCurrentNote();
 });
 
+editor.addEventListener("keydown", (e) => {
+    if (e.key === "Tab") {
+        e.preventDefault();
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        editor.setRangeText("    ", start, end, "end");
+        editor.dispatchEvent(new Event("input"));
+    }
+});
+
 editor.addEventListener("input", () => {
     saveCurrentNote();
     editor.style.height = "auto";
     editor.style.height = editor.scrollHeight + "px";
     const overflow = editor.getBoundingClientRect().bottom - (window.innerHeight * 0.98);
     if (overflow > 0) window.scrollBy({ top: overflow, behavior: "instant" });
+    updateWordCount();
 });
 
 function escapeHtml(text) {
@@ -206,12 +293,12 @@ toggle.addEventListener("change", () => {
     }
 });
 
-const island      = document.getElementById("island");
-const btnShare    = document.getElementById("btn-share");
-const btnFormat   = document.getElementById("btn-format");
-const btnAccount  = document.getElementById("btn-account");
-const panelShare  = document.getElementById("panel-share");
-const panelFormat = document.getElementById("panel-format");
+const island       = document.getElementById("island");
+const btnShare     = document.getElementById("btn-share");
+const btnFormat    = document.getElementById("btn-format");
+const btnAccount   = document.getElementById("btn-account");
+const panelShare   = document.getElementById("panel-share");
+const panelFormat  = document.getElementById("panel-format");
 const panelAccount = document.getElementById("panel-account");
 
 const panels = [
@@ -270,17 +357,17 @@ function insertLinePrefix(prefix) {
 document.querySelectorAll(".fmt-btn").forEach(btn => {
     btn.addEventListener("click", () => {
         const a = btn.dataset.action;
-        if (a === "bold")          insertAround("**", "**");
-        else if (a === "italic")   insertAround("*", "*");
-        else if (a === "underline") insertAround("__", "__");
+        if (a === "bold")            insertAround("**", "**");
+        else if (a === "italic")     insertAround("*", "*");
+        else if (a === "underline")  insertAround("__", "__");
         else if (a === "strikethrough") insertAround("~~", "~~");
-        else if (a === "code")     insertAround("`", "`");
-        else if (a === "h1")       insertLinePrefix("# ");
-        else if (a === "h2")       insertLinePrefix("## ");
-        else if (a === "h3")       insertLinePrefix("### ");
-        else if (a === "bullet")   insertLinePrefix("- ");
+        else if (a === "code")       insertAround("`", "`");
+        else if (a === "h1")         insertLinePrefix("# ");
+        else if (a === "h2")         insertLinePrefix("## ");
+        else if (a === "h3")         insertLinePrefix("### ");
+        else if (a === "bullet")     insertLinePrefix("- ");
         else if (a === "blockquote") insertLinePrefix("> ");
-        else if (a === "subtext")  insertLinePrefix("-# ");
+        else if (a === "subtext")    insertLinePrefix("-# ");
     });
 });
 
@@ -300,7 +387,135 @@ document.getElementById("action-download-txt").addEventListener("click", () => {
 });
 
 document.getElementById("action-download-pdf").addEventListener("click", () => window.print());
-document.getElementById("action-copy-link").addEventListener("click", () => navigator.clipboard.writeText(window.location.href));
+
+const shareBackdrop   = document.getElementById("share-backdrop");
+const shareModal      = document.getElementById("share-modal");
+const shareModalClose = document.getElementById("share-modal-close");
+const sharePublic     = document.getElementById("share-public");
+const shareAllowlist  = document.getElementById("share-allowlist");
+const shareEmailWrap  = document.getElementById("share-email-wrap");
+const shareEmailInput = document.getElementById("share-email-input");
+const shareEmailTags  = document.getElementById("share-email-tags");
+const shareCopyBtn    = document.getElementById("share-copy-btn");
+
+let allowedEmails = [];
+
+function isValidEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+function openShareModal() {
+    sharePublic.checked = false;
+    shareAllowlist.checked = false;
+    allowedEmails = [];
+    shareEmailTags.innerHTML = "";
+    shareEmailInput.value = "";
+    shareEmailWrap.classList.remove("visible");
+    shareCopyBtn.disabled = true;
+    shareCopyBtn.textContent = "Copy link";
+    shareBackdrop.classList.add("visible");
+    shareModal.classList.add("visible");
+    closeAllPanels();
+}
+
+function closeShareModal() {
+    shareBackdrop.classList.remove("visible");
+    shareModal.classList.remove("visible");
+}
+
+document.getElementById("action-copy-link").addEventListener("click", openShareModal);
+shareModalClose.addEventListener("click", closeShareModal);
+shareBackdrop.addEventListener("click", closeShareModal);
+
+function updateShareCopyBtn() {
+    if (sharePublic.checked) { shareCopyBtn.disabled = false; }
+    else if (shareAllowlist.checked) { shareCopyBtn.disabled = allowedEmails.length === 0; }
+    else { shareCopyBtn.disabled = true; }
+}
+
+sharePublic.addEventListener("change", () => {
+    if (sharePublic.checked) {
+        shareAllowlist.checked = false;
+        shareEmailWrap.classList.remove("visible");
+    }
+    updateShareCopyBtn();
+});
+
+shareAllowlist.addEventListener("change", () => {
+    if (shareAllowlist.checked) {
+        sharePublic.checked = false;
+        shareEmailWrap.classList.add("visible");
+        shareEmailInput.focus();
+    } else {
+        shareEmailWrap.classList.remove("visible");
+    }
+    updateShareCopyBtn();
+});
+
+function addEmailTag(email) {
+    if (!isValidEmail(email) || allowedEmails.includes(email)) return;
+    allowedEmails.push(email);
+    const tag = document.createElement("div");
+    tag.className = "email-tag";
+    tag.innerHTML = `<span>${email}</span><button type="button">×</button>`;
+    tag.querySelector("button").addEventListener("click", () => {
+        allowedEmails = allowedEmails.filter(e => e !== email);
+        tag.remove();
+        updateShareCopyBtn();
+    });
+    shareEmailTags.appendChild(tag);
+    updateShareCopyBtn();
+}
+
+shareEmailInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        const val = shareEmailInput.value.trim().replace(/,$/, "");
+        if (val) { addEmailTag(val); shareEmailInput.value = ""; }
+    }
+});
+
+shareEmailInput.addEventListener("blur", () => {
+    const val = shareEmailInput.value.trim();
+    if (val) { addEmailTag(val); shareEmailInput.value = ""; }
+});
+
+shareCopyBtn.addEventListener("click", async () => {
+    if (!currentId) return;
+    const notes = getNotes();
+    const note  = notes[currentId];
+    if (!note) return;
+
+    shareCopyBtn.textContent = "Creating link…";
+    shareCopyBtn.disabled = true;
+
+    const shareId = "share-" + Date.now();
+    const mode = sharePublic.checked ? "public" : "allowlist";
+
+    const { error } = await sb.from("shared_notes").insert({
+        id: shareId,
+        owner_id: currentUser?.id || null,
+        note_id: currentId,
+        title: note.title,
+        body: note.body,
+        mode
+    });
+
+    if (!error && mode === "allowlist" && allowedEmails.length > 0) {
+        await sb.from("share_allowlist").insert(
+            allowedEmails.map(email => ({ shared_note_id: shareId, email }))
+        );
+    }
+
+    if (error) {
+        shareCopyBtn.textContent = "Error — try again";
+        shareCopyBtn.disabled = false;
+        return;
+    }
+
+    const url = `${location.origin}${location.pathname}?share=${shareId}`;
+    await navigator.clipboard.writeText(url);
+    shareCopyBtn.textContent = "Link copied!";
+    setTimeout(() => { closeShareModal(); }, 1500);
+});
 
 const settingsPanel   = document.getElementById("settings-panel");
 const settingsOverlay = document.getElementById("settings-overlay");

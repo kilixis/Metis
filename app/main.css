@@ -358,6 +358,7 @@ textarea {
     align-items: center;
     justify-content: center;
     max-width: 140px;
+    min-width: 120px;
     transition: max-width 0.65s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
     white-space: nowrap;
@@ -379,10 +380,11 @@ textarea {
 .island-btn {
     background: none;
     border: none;
-    color: var(--text-placeholder);
+    color: rgba(255,255,255,0.7);
     cursor: pointer;
     width: 32px;
     height: 32px;
+    min-width: 32px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -394,10 +396,12 @@ textarea {
 
 .island-btn:hover {
     background-color: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,1);
 }
 
 .island-btn.collapsed {
     width: 0;
+    min-width: 0;
     opacity: 0;
     pointer-events: none;
 }
@@ -645,4 +649,330 @@ textarea {
 .stepper-btn:hover {
     background-color: var(--hover-bg);
     color: var(--text);
+}
+#share-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 300;
+    animation: fadeIn 0.2s ease;
+}
+
+#share-backdrop.visible {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+#share-modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.96);
+    width: 400px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    z-index: 301;
+    flex-direction: column;
+    gap: 0;
+    animation: modalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+#share-modal.visible {
+    display: flex;
+}
+
+@keyframes modalIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+#share-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 20px 16px;
+    font-family: "Work Sans";
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    border-bottom: 1px solid var(--border-soft);
+}
+
+#share-modal-close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--text-faint);
+    line-height: 1;
+    padding: 0;
+    transition: color 0.15s;
+}
+
+#share-modal-close:hover {
+    color: var(--text);
+}
+
+#share-options {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+}
+
+.share-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    cursor: pointer;
+    gap: 16px;
+    transition: background-color 0.15s;
+}
+
+.share-option:hover {
+    background-color: var(--hover-bg);
+}
+
+.share-option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.share-option-label {
+    font-family: "Work Sans";
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.share-option-sub {
+    font-family: "Work Sans";
+    font-size: 12px;
+    color: var(--text-faint);
+}
+
+#share-email-wrap {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 20px 16px;
+    border-top: 1px solid var(--border-soft);
+    margin-top: 4px;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), padding 0.35s ease;
+}
+
+#share-email-wrap.visible {
+    display: flex;
+    max-height: 160px;
+    padding-top: 14px;
+}
+
+#share-email-input {
+    font-family: "Manrope Variable";
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-soft);
+    outline: none;
+    padding: 6px 0;
+    width: 100%;
+    transition: border-color 0.2s;
+}
+
+#share-email-input:focus {
+    border-bottom-color: var(--text);
+}
+
+#share-email-input::placeholder {
+    color: var(--text-placeholder);
+    font-size: 13px;
+}
+
+#share-email-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 0;
+}
+
+.email-tag {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--hover-bg);
+    border: 1px solid var(--border-soft);
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-family: "Work Sans";
+    font-size: 12px;
+    color: var(--text-mid);
+}
+
+.email-tag button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-faint);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.15s;
+}
+
+.email-tag button:hover {
+    color: var(--text);
+}
+
+#share-copy-btn {
+    margin: 0 20px 20px;
+    font-family: "Work Sans";
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--surface);
+    background: var(--text);
+    border: none;
+    padding: 12px 0;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+#share-copy-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+#share-copy-btn:not(:disabled):hover {
+    opacity: 0.8;
+}
+
+.note-shared-icon {
+    flex-shrink: 0;
+    color: var(--text-faint);
+    margin-left: 4px;
+    display: flex;
+    align-items: center;
+}
+#word-count {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    font-family: "Work Sans";
+    font-size: 12px;
+    color: var(--text-faint);
+    pointer-events: none;
+    transition: color 0.3s ease;
+}
+@media (max-width: 768px) {
+    body {
+        padding: 6vh 0 60px;
+    }
+
+    #container {
+        width: 92%;
+    }
+
+    #title {
+        font-size: 36px;
+        padding: 14px 16px 10px;
+    }
+
+    textarea {
+        font-size: 16px;
+        padding: 16px;
+        padding-top: 28px;
+    }
+
+    #preview {
+        font-size: 16px;
+        padding: 16px;
+    }
+
+    #sidebar {
+        width: 80vw;
+        left: -80vw;
+    }
+
+    #sidebar-toggle {
+        top: 14px;
+        left: 12px;
+    }
+
+    #md-toggle-container {
+        top: 14px;
+        right: 12px;
+        font-size: 12px;
+        gap: 6px;
+    }
+
+    #island {
+        top: 10px;
+    }
+
+    #island.expanded-share,
+    #island.expanded-format,
+    #island.expanded-account {
+        max-width: calc(100vw - 24px);
+    }
+
+    .panel-item {
+        font-size: 12px;
+        padding: 5px 7px;
+    }
+
+    .fmt-btn {
+        padding: 4px 6px;
+        min-width: 26px;
+    }
+
+    #panel-format {
+        overflow-x: auto;
+    }
+
+    #settings-panel {
+        width: 85vw;
+        right: -85vw;
+    }
+
+    #share-modal {
+        width: 92vw;
+    }
+
+    #word-count {
+        bottom: 14px;
+        left: 12px;
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    #container {
+        width: 100%;
+        border-left: none;
+        border-right: none;
+    }
+
+    #title {
+        font-size: 30px;
+    }
+
+    .island-btn {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+    }
+
+    #island-icons {
+        padding: 6px 8px;
+    }
 }

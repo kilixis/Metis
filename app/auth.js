@@ -36,6 +36,11 @@ function setMode(login) {
     }
 }
 
+function getRedirectTarget() {
+    const next = new URLSearchParams(location.search).get("next");
+    return next ? decodeURIComponent(next) : "main.html";
+}
+
 switchBtn.addEventListener("click", () => setMode(!isLogin));
 
 togglePassword.addEventListener("mousedown", (e) => {
@@ -66,7 +71,7 @@ authSubmit.addEventListener("click", async () => {
             authSubmit.textContent = "Sign in";
             authSubmit.disabled = false;
         } else {
-            window.location.href = "main.html";
+            window.location.href = getRedirectTarget();
         }
     } else {
         const { error } = await sb.auth.signUp({
@@ -79,7 +84,7 @@ authSubmit.addEventListener("click", async () => {
             authSubmit.textContent = "Sign up";
             authSubmit.disabled = false;
         } else {
-            window.location.href = "main.html";
+            window.location.href = getRedirectTarget();
         }
     }
 });
@@ -89,5 +94,5 @@ document.querySelectorAll(".field input").forEach(input => {
 });
 
 sb.auth.getSession().then(({ data: { session } }) => {
-    if (session) window.location.href = "main.html";
+    if (session) window.location.href = getRedirectTarget();
 });

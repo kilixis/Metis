@@ -202,3 +202,20 @@ body {
 #auth-subtitle a:hover {
     color: #555;
 }
+@media (max-width: 480px) {
+    body {
+        align-items: flex-start;
+        padding: 40px 16px;
+    }
+
+    #auth-container {
+        width: 100%;
+        padding: 36px 24px 32px;
+        border-left: none;
+        border-right: none;
+    }
+
+    #auth-title {
+        font-size: 28px;
+    }
+}

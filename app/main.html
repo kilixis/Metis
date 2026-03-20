@@ -170,6 +170,43 @@
         </div>
     </div>
 
+    <div id="share-backdrop"></div>
+    <div id="share-modal">
+        <div id="share-modal-header">
+            <span>Who can open this link?</span>
+            <button id="share-modal-close">×</button>
+        </div>
+        <div id="share-options">
+            <label class="share-option">
+                <div class="share-option-text">
+                    <span class="share-option-label">Anyone with the link</span>
+                    <span class="share-option-sub">No account needed to view</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="share-public">
+                    <span class="slider"></span>
+                </label>
+            </label>
+            <label class="share-option">
+                <div class="share-option-text">
+                    <span class="share-option-label">Specific accounts only</span>
+                    <span class="share-option-sub">Only signed-in users you approve</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="share-allowlist">
+                    <span class="slider"></span>
+                </label>
+            </label>
+        </div>
+        <div id="share-email-wrap">
+            <input type="text" id="share-email-input" placeholder="Add email addresses, separated by commas">
+            <div id="share-email-tags"></div>
+        </div>
+        <button id="share-copy-btn" disabled>Copy link</button>
+    </div>
+
+    <div id="word-count">0 words</div>
+
     <div id="container">
         <input type="text" placeholder="Title" id="title">
         <textarea id="editor" placeholder="..."></textarea>
