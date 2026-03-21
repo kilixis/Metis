@@ -193,7 +193,7 @@ async function checkIncomingShare() {
         const { data: allowed } = await sb.from("share_allowlist")
             .select("email")
             .eq("shared_note_id", shareId)
-            .eq("email", currentUser.email);
+            .eq("email", currentUser.email.toLowerCase().trim());
         if (!allowed || allowed.length === 0) {
             window.history.replaceState({}, "", location.pathname);
             alert("Your account doesn't have access to this shared note.");

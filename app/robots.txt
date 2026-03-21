@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /main.html
+Disallow: /auth.html
+Disallow: /confirm.html
+Allow: /index.html
+Allow: /
