@@ -575,16 +575,39 @@ document.getElementById("font-decrease").addEventListener("click", () => { if (f
 document.getElementById("lh-increase").addEventListener("click",  () => { if (lineHeight < 3.0) { lineHeight = Math.round((lineHeight + 0.1) * 10) / 10; applyEditorPrefs(); } });
 document.getElementById("lh-decrease").addEventListener("click",  () => { if (lineHeight > 1.0) { lineHeight = Math.round((lineHeight - 0.1) * 10) / 10; applyEditorPrefs(); } });
 
-const spellcheckToggle = document.getElementById("spellcheck-toggle");
-spellcheckToggle.checked = localStorage.getItem("spellcheck") !== "false";
-editor.spellcheck = spellcheckToggle.checked;
-spellcheckToggle.addEventListener("change", () => {
-    editor.spellcheck = spellcheckToggle.checked;
-    localStorage.setItem("spellcheck", spellcheckToggle.checked);
-});
+const confirmBackdrop = document.getElementById("confirm-backdrop");
+const confirmDialog   = document.getElementById("confirm-dialog");
+const confirmMessage  = document.getElementById("confirm-message");
+const confirmOk       = document.getElementById("confirm-ok");
+const confirmCancel   = document.getElementById("confirm-cancel");
+
+function showConfirm(message) {
+    return new Promise((resolve) => {
+        confirmMessage.textContent = message;
+        confirmBackdrop.classList.add("visible");
+        confirmDialog.classList.add("visible");
+
+        function cleanup(result) {
+            confirmBackdrop.classList.remove("visible");
+            confirmDialog.classList.remove("visible");
+            confirmOk.removeEventListener("click", onOk);
+            confirmCancel.removeEventListener("click", onCancel);
+            confirmBackdrop.removeEventListener("click", onCancel);
+            resolve(result);
+        }
+
+        const onOk     = () => cleanup(true);
+        const onCancel = () => cleanup(false);
+
+        confirmOk.addEventListener("click", onOk);
+        confirmCancel.addEventListener("click", onCancel);
+        confirmBackdrop.addEventListener("click", onCancel);
+    });
+}
 
 document.getElementById("btn-delete-notes").addEventListener("click", async () => {
-    if (!confirm("Delete all notes? This cannot be undone.")) return;
+    const ok = await showConfirm("Delete all notes? This cannot be undone.");
+    if (!ok) return;
     if (currentUser) await sb.from("notes").delete().eq("user_id", currentUser.id);
     localStorage.removeItem("notes");
     createNote();
@@ -592,7 +615,8 @@ document.getElementById("btn-delete-notes").addEventListener("click", async () =
 });
 
 document.getElementById("btn-delete-account").addEventListener("click", async () => {
-    if (!confirm("Permanently delete your account and all data? This cannot be undone.")) return;
+    const ok = await showConfirm("Permanently delete your account and all data? This cannot be undone.");
+    if (!ok) return;
     if (currentUser) {
         await sb.from("notes").delete().eq("user_id", currentUser.id);
         await sb.rpc("delete_own_account");
