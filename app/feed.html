@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="feed.css">
+    <title>Metis — Read</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="feed.js" defer></script>
+</head>
+<body>
+    <header id="top-bar">
+        <a href="index.html" id="wordmark">metisnotes</a>
+        <nav id="top-nav">
+            <a href="main.html" id="btn-write">Write</a>
+            <a href="auth.html" id="btn-account-nav">Sign in</a>
+            <span id="btn-user-name" style="display:none"></span>
+        </nav>
+    </header>
+
+    <section id="hero-banner">
+        <div id="hero-label">Featured</div>
+        <div id="hero-content">
+            <div id="hero-meta">
+                <span id="hero-author"></span>
+                <span id="hero-date"></span>
+            </div>
+            <h1 id="hero-title">Loading…</h1>
+            <p id="hero-excerpt"></p>
+            <div id="hero-stats">
+                <span id="hero-views"></span>
+                <span id="hero-likes"></span>
+            </div>
+            <a id="hero-read-btn" href="#">Read article →</a>
+        </div>
+    </section>
+
+    <main id="feed-main">
+        <div id="filter-bar">
+            <div id="filter-sort">
+                <button class="sort-btn active" data-sort="newest">Newest</button>
+                <button class="sort-btn" data-sort="views">Most viewed</button>
+                <button class="sort-btn" data-sort="likes">Most liked</button>
+            </div>
+            <div id="filter-author-wrap">
+                <input type="text" id="filter-author" placeholder="Filter by author…">
+            </div>
+        </div>
+
+        <div id="card-grid"></div>
+
+        <div id="feed-empty" style="display:none">
+            <p>No articles published yet.</p>
+        </div>
+
+        <div id="feed-loading">
+            <span></span><span></span><span></span>
+        </div>
+    </main>
+
+    <footer id="feed-footer">
+        <span>metisnotes — free to use, no ads.</span>
+    </footer>
+</body>
+</html>
