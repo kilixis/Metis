@@ -625,3 +625,49 @@ document.getElementById("btn-delete-account").addEventListener("click", async ()
     localStorage.clear();
     window.location.href = "auth.html";
 });
+
+const btnPublish = document.getElementById("btn-publish");
+
+btnPublish.addEventListener("click", async () => {
+    if (!currentUser) {
+        window.location.href = "auth.html?next=" + encodeURIComponent(location.pathname);
+        return;
+    }
+
+    const title = titleInput.value.trim();
+    const body  = editor.value.trim();
+
+    if (!title) { alert("Add a title before publishing."); return; }
+    if (!body)  { alert("Write something before publishing."); return; }
+
+    const ok = await showConfirm(`Publish "${title}"? It will be visible to everyone on the feed.`);
+    if (!ok) return;
+
+    btnPublish.textContent = "Publishing…";
+    btnPublish.disabled = true;
+
+    const authorName = currentUser.user_metadata?.full_name
+        || currentUser.email.split("@")[0];
+
+    const { error } = await sb.from("articles").insert({
+        user_id:     currentUser.id,
+        title,
+        body,
+        author_name: authorName,
+        is_published: true,
+        published_at: new Date().toISOString(),
+    });
+
+    if (error) {
+        btnPublish.textContent = "Publish";
+        btnPublish.disabled = false;
+        alert("Failed to publish: " + error.message);
+        return;
+    }
+
+    btnPublish.textContent = "Published!";
+    setTimeout(() => {
+        btnPublish.textContent = "Publish";
+        btnPublish.disabled = false;
+    }, 2500);
+});

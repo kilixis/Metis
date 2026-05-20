@@ -87,18 +87,24 @@ body {
 
 #btn-feed {
     position: fixed;
-    top: 16px;
-    left: 50px;
+    top: 15px;
+    left: 52px;
     font-family: "Work Sans";
-    font-size: 20px;
+    font-size: 0.75rem;
     font-weight: 600;
-    color: var(--text-faint, #888);
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    padding: 6px 13px;
     text-decoration: none;
-    transition: color 0.15s;
+    transition: border-color 0.15s, color 0.15s;
+    z-index: 98;
 }
 
 #btn-feed:hover {
-    color: var(--text, #111);
+    border-color: var(--border);
+    color: var(--text);
 }
 
 #sidebar-overlay {
@@ -1090,4 +1096,37 @@ textarea {
 
 [data-theme="dark"] #confirm-ok.danger:hover {
     background: #ff4444;
+}
+
+#md-toggle-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: "Work Sans";
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+#btn-publish {
+    position: fixed;
+    top: 15.6px;
+    right: 185px;
+    font-family: "Work Sans";
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--surface);
+    background: var(--text);
+    border: 1px solid var(--border);
+    padding: 6px 13px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    z-index: 98;
+}
+
+#btn-publish:hover {
+    opacity: 0.75;
 }
